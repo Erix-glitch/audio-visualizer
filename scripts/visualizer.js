@@ -41,6 +41,13 @@ export function createVisualizer({
   audioDataTex.needsUpdate = true;
   const audioPixels = audioDataTex.image.data;
 
+  const emptyTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat);
+  emptyTexture.needsUpdate = true;
+
+  const mouse = new THREE.Vector4(0, 0, 0, 0);
+  let mouseIsDown = false;
+  let frameCount = 0;
+
   const settings = {
     shader: defaultShader,
     speed: defaultConfig.speed ?? 1.0,
@@ -52,8 +59,25 @@ export function createVisualizer({
   const uniforms = {
     iResolution: { value: new THREE.Vector3(window.innerWidth, window.innerHeight, 1.0) },
     iTime: { value: 0 },
+    iTimeDelta: { value: 0 },
+    iFrameRate: { value: 0 },
+    iFrame: { value: 0 },
     iChannelTime: { value: [0, 0, 0, 0] },
+    iChannelResolution: {
+      value: [
+        new THREE.Vector3(fftSize, 1, 1),
+        new THREE.Vector3(1, 1, 1),
+        new THREE.Vector3(1, 1, 1),
+        new THREE.Vector3(1, 1, 1)
+      ]
+    },
+    iMouse: { value: mouse },
     iChannel0: { value: audioDataTex },
+    iChannel1: { value: emptyTexture },
+    iChannel2: { value: emptyTexture },
+    iChannel3: { value: emptyTexture },
+    iDate: { value: new THREE.Vector4() },
+    iSampleRate: { value: 44100 },
     uSensitivity: { value: settings.sensitivity },
     uBrightness: { value: settings.brightness },
     uColor: { value: new THREE.Color(settings.color) }
@@ -157,6 +181,37 @@ export function createVisualizer({
   };
   document.body.addEventListener("click", unlockAudioContext);
 
+  const pointerToPixels = (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * window.devicePixelRatio;
+    const y = (rect.bottom - event.clientY) * window.devicePixelRatio;
+    return { x, y };
+  };
+
+  const handlePointerMove = (event) => {
+    if (!mouseIsDown) return;
+    const { x, y } = pointerToPixels(event);
+    mouse.x = x;
+    mouse.y = y;
+  };
+
+  const handlePointerDown = (event) => {
+    mouseIsDown = true;
+    const { x, y } = pointerToPixels(event);
+    mouse.x = x;
+    mouse.y = y;
+    mouse.z = x;
+    mouse.w = y;
+  };
+
+  const handlePointerUp = () => {
+    mouseIsDown = false;
+  };
+
+  renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+  window.addEventListener("pointerup", handlePointerUp);
+  window.addEventListener("pointermove", handlePointerMove);
+
   const clock = new THREE.Clock();
   let shaderTime = 0;
   let micActive = false;
@@ -165,9 +220,21 @@ export function createVisualizer({
     requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
+    frameCount += 1;
     shaderTime += delta * settings.speed;
     uniforms.iTime.value = shaderTime;
+    uniforms.iTimeDelta.value = delta;
+    uniforms.iFrame.value = frameCount;
+    uniforms.iFrameRate.value = delta > 0 ? 1 / delta : 0;
     uniforms.iChannelTime.value[0] = micActive ? shaderTime : audioEl.currentTime;
+
+    const now = new Date();
+    uniforms.iDate.value.set(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      now.getDate(),
+      now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000
+    );
 
     analyser.getFrequencyData();
     const freqData = analyser.data;
@@ -191,12 +258,18 @@ export function createVisualizer({
   const dispose = () => {
     window.removeEventListener("resize", handleResize);
     document.body.removeEventListener("click", unlockAudioContext);
+    renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+    window.removeEventListener("pointerup", handlePointerUp);
+    window.removeEventListener("pointermove", handlePointerMove);
     gui.destroy();
     renderer.dispose();
     if (renderer.domElement.parentElement) {
       renderer.domElement.parentElement.removeChild(renderer.domElement);
     }
   };
+
+  const audioContext = THREE.AudioContext.getContext();
+  uniforms.iSampleRate.value = audioContext?.sampleRate ?? 44100;
 
   return {
     audio,

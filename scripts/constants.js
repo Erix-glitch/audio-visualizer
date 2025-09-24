@@ -6,5 +6,9 @@ export const SHADERS = {
   Waves: {
     fragment: "shaders/wave_lines.glsl",
     settings: "settings/Waves.json"
+  },
+  CellularSpectrum: {
+    fragment: "shaders/cellular_spectrum.glsl",
+    settings: "settings/CellularSpectrum.json"
   }
 };
