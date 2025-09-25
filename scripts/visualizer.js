@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { GUI } from "https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.module.js";
 
 export function createVisualizer({
   audioEl,
@@ -96,100 +97,73 @@ export function createVisualizer({
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
   scene.add(quad);
 
-  const tweakpaneGlobal = window.Tweakpane ?? window.tweakpane;
-  if (!tweakpaneGlobal?.Pane) {
-    throw new Error("Tweakpane library failed to load");
-  }
+  const gui = new GUI({ width: 300 });
+  gui.domElement.style.position = "absolute";
+  gui.domElement.style.top = "10px";
+  gui.domElement.style.right = "10px";
+  gui.domElement.style.zIndex = "20";
 
-  const controlsContainer = document.createElement("div");
-  controlsContainer.style.position = "absolute";
-  controlsContainer.style.top = "10px";
-  controlsContainer.style.right = "10px";
-  controlsContainer.style.zIndex = "20";
-  controlsContainer.style.width = "300px";
-  document.body.appendChild(controlsContainer);
-
-  const pane = new tweakpaneGlobal.Pane({ container: controlsContainer });
+  let speedController;
+  let sensitivityController;
+  let brightnessController;
+  let colorController;
 
   const applyShaderConfig = (config) => {
     if (!config) return;
-    if (config.speed !== undefined) {
-      settings.speed = config.speed;
+    if (config.speed !== undefined && speedController) {
+      speedController.setValue(config.speed);
     }
-    if (config.sensitivity !== undefined) {
-      settings.sensitivity = config.sensitivity;
-      uniforms.uSensitivity.value = config.sensitivity;
+    if (config.sensitivity !== undefined && sensitivityController) {
+      sensitivityController.setValue(config.sensitivity);
     }
-    if (config.brightness !== undefined) {
-      settings.brightness = config.brightness;
-      uniforms.uBrightness.value = config.brightness;
+    if (config.brightness !== undefined && brightnessController) {
+      brightnessController.setValue(config.brightness);
     }
-    if (config.color !== undefined) {
-      settings.color = config.color;
-      uniforms.uColor.value.set(config.color);
-    }
-    if (typeof pane.refresh === "function") {
-      pane.refresh();
+    if (config.color !== undefined && colorController) {
+      colorController.setValue(config.color);
     }
   };
 
-  const shaderOptions = Object.fromEntries(Object.keys(shaderData).map((key) => [key, key]));
+  gui
+    .add(settings, "shader", Object.keys(shaderData))
+    .name("Shader")
+    .onChange((value) => {
+      settings.shader = value;
+      material.fragmentShader = shaderData[value]?.fragment ?? "";
+      material.needsUpdate = true;
+      applyShaderConfig(shaderData[value]?.settings);
+    });
 
-  const shaderBinding = pane.addBinding(settings, "shader", {
-    options: shaderOptions,
-    label: "Shader"
-  });
-  shaderBinding.on("change", (event) => {
-    const value = event.value;
-    material.fragmentShader = shaderData[value]?.fragment ?? "";
-    material.needsUpdate = true;
-    applyShaderConfig(shaderData[value]?.settings);
-  });
+  speedController = gui
+    .add(settings, "speed", 0.05, 5.0, 0.05)
+    .name("Time speed")
+    .onChange((value) => {
+      settings.speed = value;
+    });
 
-  const speedBinding = pane.addBinding(settings, "speed", {
-    min: 0.05,
-    max: 5.0,
-    step: 0.05,
-    label: "Time speed"
-  });
-  speedBinding.on("change", (event) => {
-    settings.speed = event.value;
-  });
+  sensitivityController = gui
+    .add(settings, "sensitivity", 0.1, 10.0, 0.05)
+    .name("Sensitivity")
+    .onChange((value) => {
+      settings.sensitivity = value;
+      uniforms.uSensitivity.value = value;
+    });
 
-  const sensitivityBinding = pane.addBinding(settings, "sensitivity", {
-    min: 0.1,
-    max: 10.0,
-    step: 0.05,
-    label: "Sensitivity"
-  });
-  sensitivityBinding.on("change", (event) => {
-    const value = event.value;
-    settings.sensitivity = value;
-    uniforms.uSensitivity.value = value;
-  });
+  brightnessController = gui
+    .add(settings, "brightness", 0.1, 10.0, 0.05)
+    .name("Brightness")
+    .onChange((value) => {
+      settings.brightness = value;
+      uniforms.uBrightness.value = value;
+    });
 
-  const brightnessBinding = pane.addBinding(settings, "brightness", {
-    min: 0.1,
-    max: 10.0,
-    step: 0.05,
-    label: "Brightness"
-  });
-  brightnessBinding.on("change", (event) => {
-    const value = event.value;
-    settings.brightness = value;
-    uniforms.uBrightness.value = value;
-  });
-
-  const colorBinding = pane.addBinding(settings, "color", {
-    label: "Color",
-    view: "color",
-    color: { type: "string" }
-  });
-  colorBinding.on("change", (event) => {
-    const value = event.value;
-    settings.color = value;
-    uniforms.uColor.value.set(value);
-  });
+  colorController = gui
+    .addColor(settings, "color")
+    .name("Color")
+    .onChange((value) => {
+      settings.color = value;
+      uniforms.uColor.value.set(value);
+    });
 
   applyShaderConfig(defaultConfig);
 
@@ -287,12 +261,7 @@ export function createVisualizer({
     renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
     window.removeEventListener("pointerup", handlePointerUp);
     window.removeEventListener("pointermove", handlePointerMove);
-    if (typeof pane.dispose === "function") {
-      pane.dispose();
-    }
-    if (controlsContainer.parentElement) {
-      controlsContainer.parentElement.removeChild(controlsContainer);
-    }
+    gui.destroy();
     renderer.dispose();
     if (renderer.domElement.parentElement) {
       renderer.domElement.parentElement.removeChild(renderer.domElement);
