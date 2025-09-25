@@ -8,12 +8,8 @@ export function getDomElements() {
   const songSelectEl = document.getElementById("songSelect");
   const fileInputEl = document.getElementById("fileInput");
   const volumeEl = document.getElementById("volume");
-  const micButtonEl = document.getElementById("micButton");
   const uploadLabelEl = document.querySelector(".upload-label");
 
-  if (micButtonEl && !micButtonEl.hasAttribute("aria-pressed")) {
-    micButtonEl.setAttribute("aria-pressed", "false");
-  }
   if (uploadLabelEl && !uploadLabelEl.hasAttribute("aria-disabled")) {
     uploadLabelEl.setAttribute("aria-disabled", "false");
   }
@@ -28,7 +24,6 @@ export function getDomElements() {
     songSelectEl,
     fileInputEl,
     volumeEl,
-    micButtonEl,
     uploadLabelEl
   };
 }

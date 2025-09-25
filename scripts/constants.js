@@ -7,6 +7,10 @@ export const SHADERS = {
     fragment: "shaders/wave_lines.glsl",
     settings: "settings/Waves.json"
   },
+  Disco: {
+    fragment: "shaders/disco.glsl",
+    settings: "settings/Disco.json"
+  },
   CellularSpectrum: {
     fragment: "shaders/cellular_spectrum.glsl",
     settings: "settings/CellularSpectrum.json"

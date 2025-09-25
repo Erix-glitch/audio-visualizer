@@ -248,7 +248,6 @@ export function createVisualizer({
 
   const clock = new THREE.Clock();
   let shaderTime = 0;
-  let micActive = false;
 
   const animate = () => {
     requestAnimationFrame(animate);
@@ -260,7 +259,7 @@ export function createVisualizer({
     uniforms.iTimeDelta.value = delta;
     uniforms.iFrame.value = frameCount;
     uniforms.iFrameRate.value = delta > 0 ? 1 / delta : 0;
-    uniforms.iChannelTime.value[0] = micActive ? shaderTime : audioEl.currentTime;
+    uniforms.iChannelTime.value[0] = audioEl.currentTime;
 
     const now = new Date();
     uniforms.iDate.value.set(
@@ -285,10 +284,6 @@ export function createVisualizer({
   };
   animate();
 
-  const setMicActive = (active) => {
-    micActive = active;
-  };
-
   const dispose = () => {
     window.removeEventListener("resize", handleResize);
     document.body.removeEventListener("click", unlockAudioContext);
@@ -311,7 +306,6 @@ export function createVisualizer({
     analyser,
     uniforms,
     settings,
-    setMicActive,
     applyShaderConfig,
     mediaElementSourceNode,
     dispose

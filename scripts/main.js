@@ -25,9 +25,7 @@ async function init() {
   const playerControls = createPlayerControls({
     audio: visualizer.audio,
     audioEl: elements.audioEl,
-    mediaElementSourceNode: visualizer.mediaElementSourceNode,
-    elements,
-    onMicActiveChange: visualizer.setMicActive
+    elements
   });
 
   playerControls.setSongManifest(songManifest);

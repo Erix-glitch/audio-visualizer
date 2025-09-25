@@ -1,11 +1,7 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-
 export function createPlayerControls({
   audio,
   audioEl,
-  mediaElementSourceNode,
-  elements,
-  onMicActiveChange
+  elements
 }) {
   const {
     playPauseBtn,
@@ -15,17 +11,11 @@ export function createPlayerControls({
     trackTitleEl,
     songSelectEl,
     fileInputEl,
-    volumeEl,
-    micButtonEl,
-    uploadLabelEl
+    volumeEl
   } = elements;
 
   let songManifest = [];
   let customTrackUrl;
-  let micStream;
-  let micActive = false;
-  let resumePlaybackAfterMic = false;
-  let micToggleInFlight = false;
   let lastLoadedTrackTitle = trackTitleEl?.textContent || "Untitled";
 
   const formatTime = (seconds) => {
@@ -35,15 +25,10 @@ export function createPlayerControls({
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const refreshTrackTitleDisplay = () => {
-    if (!trackTitleEl) return;
-    trackTitleEl.textContent = micActive ? "Microphone" : lastLoadedTrackTitle;
-  };
-
   const setTrackTitle = (title) => {
     lastLoadedTrackTitle = title || "Untitled";
-    if (!micActive) {
-      refreshTrackTitleDisplay();
+    if (trackTitleEl) {
+      trackTitleEl.textContent = lastLoadedTrackTitle;
     }
   };
 
@@ -109,127 +94,6 @@ export function createPlayerControls({
     songSelectEl.appendChild(customOption);
   };
 
-  const updateMicUiState = (active) => {
-    micActive = active;
-    if (micButtonEl) {
-      micButtonEl.classList.toggle("active", active);
-      micButtonEl.textContent = active ? "Stop Mic" : "Mic";
-      micButtonEl.setAttribute("aria-pressed", active ? "true" : "false");
-    }
-    if (playPauseBtn) {
-      playPauseBtn.disabled = active;
-      playPauseBtn.setAttribute("aria-disabled", active ? "true" : "false");
-      if (!active) {
-        const isPaused = audioEl.paused;
-        playPauseBtn.textContent = isPaused ? "▶" : "❚❚";
-        playPauseBtn.setAttribute("aria-label", isPaused ? "Play" : "Pause");
-      }
-    }
-    if (songSelectEl) {
-      songSelectEl.disabled = active;
-    }
-    if (fileInputEl) {
-      fileInputEl.disabled = active;
-    }
-    if (uploadLabelEl) {
-      uploadLabelEl.classList.toggle("disabled", active);
-      uploadLabelEl.setAttribute("aria-disabled", active ? "true" : "false");
-    }
-    if (progressEl) {
-      progressEl.disabled = active;
-      if (active) {
-        progressEl.value = "0";
-      } else if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
-        progressEl.value = ((audioEl.currentTime / audioEl.duration) * 1000).toString();
-      }
-    }
-    if (currentTimeEl) {
-      currentTimeEl.textContent = active ? "--" : formatTime(audioEl.currentTime);
-    }
-    if (durationEl) {
-      durationEl.textContent = active ? "--" : formatTime(audioEl.duration);
-    }
-    refreshTrackTitleDisplay();
-  };
-
-  const enableMicrophone = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      console.warn("Microphone input is not supported in this browser.");
-      return;
-    }
-
-    const wasPlaying = !audioEl.paused && !audioEl.ended;
-    resumePlaybackAfterMic = wasPlaying;
-    if (wasPlaying) {
-      audioEl.pause();
-    }
-
-    try {
-      const ctx = THREE.AudioContext.getContext();
-      if (ctx.state === "suspended") {
-        await ctx.resume();
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStream = stream;
-      if (audio.source) {
-        try {
-          audio.source.disconnect();
-        } catch (_) {
-          // already disconnected
-        }
-      }
-      audio.setMediaStreamSource(stream);
-      const currentVolume = parseFloat(volumeEl?.value ?? "1");
-      const normalizedVolume = Number.isFinite(currentVolume) ? currentVolume : 1;
-      audio.setVolume(normalizedVolume);
-      micActive = true;
-      onMicActiveChange?.(true);
-      updateMicUiState(true);
-    } catch (error) {
-      console.error("Failed to access microphone", error);
-      if (wasPlaying) {
-        const playPromise = audioEl.play();
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch(() => {});
-        }
-      }
-      resumePlaybackAfterMic = false;
-    }
-  };
-
-  const disableMicrophone = () => {
-    if (micStream) {
-      micStream.getTracks().forEach((track) => track.stop());
-      micStream = undefined;
-    }
-    if (audio.source) {
-      try {
-        audio.source.disconnect();
-      } catch (_) {
-        // already disconnected
-      }
-    }
-    if (mediaElementSourceNode) {
-      audio.source = mediaElementSourceNode;
-      audio.hasPlaybackControl = true;
-      audio.connect();
-    }
-    const currentVolume = parseFloat(volumeEl?.value ?? "1");
-    const normalizedVolume = Number.isFinite(currentVolume) ? currentVolume : 1;
-    audio.setVolume(normalizedVolume);
-    audioEl.volume = normalizedVolume;
-    micActive = false;
-    onMicActiveChange?.(false);
-    updateMicUiState(false);
-    if (resumePlaybackAfterMic) {
-      const playPromise = audioEl.play();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
-      }
-    }
-    resumePlaybackAfterMic = false;
-  };
-
   const setSongManifest = (manifest) => {
     songManifest = Array.isArray(manifest) ? manifest : [];
     populateSongSelect(songManifest);
@@ -271,7 +135,7 @@ export function createPlayerControls({
   });
 
   audioEl.addEventListener("timeupdate", () => {
-    if (!progressEl || !durationEl || !currentTimeEl || micActive) return;
+    if (!progressEl || !durationEl || !currentTimeEl) return;
     const { currentTime, duration } = audioEl;
     currentTimeEl.textContent = formatTime(currentTime);
     if (Number.isFinite(duration) && duration > 0) {
@@ -280,10 +144,10 @@ export function createPlayerControls({
   });
 
   audioEl.addEventListener("loadedmetadata", () => {
-    if (durationEl && !micActive) {
+    if (durationEl) {
       durationEl.textContent = formatTime(audioEl.duration);
     }
-    if (currentTimeEl && !micActive) {
+    if (currentTimeEl) {
       currentTimeEl.textContent = formatTime(audioEl.currentTime);
     }
   });
@@ -298,7 +162,6 @@ export function createPlayerControls({
   });
 
   progressEl?.addEventListener("input", (event) => {
-    if (micActive) return;
     const target = event.target;
     if (!target || audioEl.duration === 0 || Number.isNaN(audioEl.duration)) return;
     const ratio = parseFloat(target.value) / 1000;
@@ -310,9 +173,7 @@ export function createPlayerControls({
     const value = parseFloat(event.target.value);
     if (!Number.isFinite(value)) return;
     audio.setVolume(value);
-    if (!micActive) {
-      audioEl.volume = value;
-    }
+    audioEl.volume = value;
   });
 
   songSelectEl?.addEventListener("change", () => {
@@ -338,29 +199,8 @@ export function createPlayerControls({
     event.target.value = "";
   });
 
-  micButtonEl?.addEventListener("click", async () => {
-    if (micToggleInFlight) return;
-    micToggleInFlight = true;
-    try {
-      if (micActive) {
-        disableMicrophone();
-      } else {
-        await enableMicrophone();
-      }
-    } finally {
-      micToggleInFlight = false;
-    }
-  });
-
   const dispose = () => {
     disposeCustomTrack();
-    resumePlaybackAfterMic = false;
-    if (micActive) {
-      disableMicrophone();
-    } else if (micStream) {
-      micStream.getTracks().forEach((track) => track.stop());
-      micStream = undefined;
-    }
   };
 
   return {
