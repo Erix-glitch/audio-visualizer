@@ -99,9 +99,43 @@ export function createVisualizer({
 
   const gui = new GUI({ width: 300 });
   gui.domElement.style.position = "absolute";
-  gui.domElement.style.top = "10px";
-  gui.domElement.style.right = "10px";
   gui.domElement.style.zIndex = "20";
+
+  const guiMediaQuery = window.matchMedia("(max-width: 680px)");
+  const defaultGuiWidth = gui.domElement.style.width;
+
+  const applyGuiPosition = (isNarrow) => {
+    if (isNarrow) {
+      gui.domElement.style.top = "auto";
+      gui.domElement.style.bottom = "10px";
+      gui.domElement.style.left = "10px";
+      gui.domElement.style.right = "10px";
+      gui.domElement.style.width = "calc(100vw - 20px)";
+      gui.domElement.style.maxWidth = "360px";
+    } else {
+      gui.domElement.style.top = "10px";
+      gui.domElement.style.right = "10px";
+      gui.domElement.style.bottom = "auto";
+      gui.domElement.style.left = "auto";
+      gui.domElement.style.width = defaultGuiWidth;
+      gui.domElement.style.maxWidth = "none";
+    }
+  };
+
+  applyGuiPosition(guiMediaQuery.matches);
+
+  const handleGuiMediaChange = (event) => {
+    applyGuiPosition(event.matches);
+  };
+
+  let removeGuiMediaListener = () => {};
+  if (typeof guiMediaQuery.addEventListener === "function") {
+    guiMediaQuery.addEventListener("change", handleGuiMediaChange);
+    removeGuiMediaListener = () => guiMediaQuery.removeEventListener("change", handleGuiMediaChange);
+  } else if (typeof guiMediaQuery.addListener === "function") {
+    guiMediaQuery.addListener(handleGuiMediaChange);
+    removeGuiMediaListener = () => guiMediaQuery.removeListener(handleGuiMediaChange);
+  }
 
   let speedController;
   let sensitivityController;
@@ -261,6 +295,7 @@ export function createVisualizer({
     renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
     window.removeEventListener("pointerup", handlePointerUp);
     window.removeEventListener("pointermove", handlePointerMove);
+    removeGuiMediaListener();
     gui.destroy();
     renderer.dispose();
     if (renderer.domElement.parentElement) {

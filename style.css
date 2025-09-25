@@ -10,7 +10,7 @@ canvas { display: block; width: 100%; height: 100%; }
     top: 12px;
     left: 12px;
     z-index: 25;
-    min-width: 300px;
+    min-width: 280px;
     background: rgba(12, 12, 24, 0.82);
     border: 1px solid rgba(100, 100, 140, 0.35);
     padding: 14px 16px;
@@ -196,6 +196,69 @@ canvas { display: block; width: 100%; height: 100%; }
 #volume {
     flex: 1;
     accent-color: #9b7bff;
+}
+
+@media (max-width: 680px) {
+    #player {
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        right: auto;
+        bottom: auto;
+        transform: translateX(-50%);
+        width: calc(100vw - 24px);
+        max-width: 480px;
+        min-width: 0;
+        padding: 16px;
+    }
+
+    #player-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    #playPause {
+        width: 100%;
+    }
+
+    #track-info {
+        align-items: stretch;
+    }
+
+    #track-title {
+        max-width: none;
+        text-align: center;
+    }
+
+    .time-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    #progress {
+        width: 100%;
+    }
+
+    #sources {
+        grid-template-columns: 1fr;
+    }
+
+    .source-row {
+        flex-direction: column;
+    }
+
+    .source-row > * {
+        flex: none;
+        width: 100%;
+    }
+
+    #volume-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
 }
 
 #audio {
