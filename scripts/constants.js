@@ -1,6 +1,6 @@
 export const SHADERS = {
   Boxes: {
-    fragment: "shaders/fragment.glsl",
+    fragment: "shaders/boxes.glsl",
     settings: "settings/Boxes.json"
   },
   Waves: {
