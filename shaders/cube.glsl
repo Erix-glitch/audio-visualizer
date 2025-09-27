@@ -21,7 +21,7 @@ float cube(vec3 p, mat2 h, mat2 v)
     p.yz *= h;
     p.xz *= v;
     p = abs(p);
-      float x = texture(iChannel0, vec2(0.1,0.25)).x;
+    float x = clamp(texture(iChannel0, vec2(0.1, 0.25)).x * uSensitivity, 0.0, 1.0);
     a = max(p.x, max(p.y, p.z))-2.414*(1.+x);
     p = abs(p-round(p));
     b = max(p.x, max(p.y, p.z))-.3*(1.+x);
@@ -33,8 +33,8 @@ void mainImage( out vec4 C, vec2 U )
     float t = iTime/60.,
           s = 1., d = 0., i = d, r, r2;
     
-    float x = texture(iChannel0, vec2(0.2,0.25)).x;
-    float y = texture(iChannel0, vec2(0.05,0.25)).x;
+    float x = clamp(texture(iChannel0, vec2(0.2, 0.25)).x * uSensitivity, 0.0, 1.0);
+    float y = clamp(texture(iChannel0, vec2(0.05, 0.25)).x * uSensitivity, 0.0, 1.0);
     vec2 m =  
         vec2((R.y+sin(x))/R.y,1.);
        
@@ -67,7 +67,8 @@ void mainImage( out vec4 C, vec2 U )
         c += min(vec3(s), .003/s * (H(s + 5./r2 - .1)*.6+.1));
     }
     
-    C = vec4(c*c, 1);
+    vec3 color = c * c * uBrightness;
+    C = vec4(color, 1.);
 }
 
 void main() {
