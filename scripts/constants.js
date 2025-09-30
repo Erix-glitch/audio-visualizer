@@ -3,6 +3,10 @@ export const SHADERS = {
     fragment: "shaders/boxes.glsl",
     settings: "settings/Boxes.json"
   },
+  Cubes: {
+    fragment: "shaders/cube.glsl",
+    settings: "settings/Cubes.json"
+  },
   Waves: {
     fragment: "shaders/wave_lines.glsl",
     settings: "settings/Waves.json"
